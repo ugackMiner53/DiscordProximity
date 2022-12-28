@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "discordproximity",
+  "version": "${version}",
+
+  "name": "Discord Proximity Chat",
+  "description": "Talk to people regardless of server-side software! Built with the power of Discord.",
+  "authors": [
+    "ugackMiner"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+
+  "license": "CC0-1.0",
+  "icon": "assets/discordproximity/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.fabricmc.example.ExampleMod"
+    ]
+  },
+  "mixins": [
+    "discordproximity.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.14.11",
+    "fabric-api": "*",
+    "minecraft": "~1.19.3",
+    "java": ">=17"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
