@@ -19,7 +19,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.fabricmc.example.ExampleMod"
+      "com.ugackminer.discordproximity.DiscordProximity"
     ]
   },
   "mixins": [
