@@ -42,3 +42,5 @@ replay_*.log
 # discord
 src/main/resources/lib/x86/*
 src/main/resources/lib/x86_64/*
+# Hide the application ClientID from the git log
+src/main/java/com/ugackminer/discordproximity/Constants.java
