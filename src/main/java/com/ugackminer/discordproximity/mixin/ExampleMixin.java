@@ -8,9 +8,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.ugackminer.discordproximity.DiscordProximity;
 
 import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.entity.player.PlayerEntity;
 
-@Mixin(PlayerEntity.class)
+@Mixin(TitleScreen.class)
 public class ExampleMixin {
 	@Inject(at = @At("HEAD"), method = "init()V")
 	private void init(CallbackInfo info) {
