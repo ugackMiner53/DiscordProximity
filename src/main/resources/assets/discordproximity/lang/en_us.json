@@ -1,0 +1,20 @@
+{
+    "commands.info": "Discord Proximity Chat Version %s",
+
+    "commands.lobby.list": "Listed public lobbies for %s:",
+    "commands.lobby.list.user": "%s#%s",
+
+    "commands.lobby.create.private": "Private lobby created ",
+    "commands.lobby.create.private.id": "(%d)",
+    "commands.lobby.create.private.secret": "SECRET",
+
+    "commands.lobby.create.public": "Public lobby created (%d)",
+
+    "commands.lobby.join.private": "Connected to private lobby %s#%s (%d)",
+    "commands.lobby.join.public": "Connected to %s#%s (%d)",
+
+    "commands.lobby.leave": "Disconnected from lobby!",
+    "commands.lobby.leave.error": "There was an error disconnecting from the lobby.",
+
+    "commands.click.copy": "Copy to clipboard"
+}

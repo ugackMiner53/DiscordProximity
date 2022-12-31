@@ -190,6 +190,9 @@ public class DiscordProximity implements ModInitializer {
 	}
 
 	public static void leaveLobby(Object... unused) {
+		if (core.lobbyManager().getLobbies().isEmpty()) {
+			return;
+		}
 		LOGGER.info("Disconnecting from voice...");
 		core.lobbyManager().disconnectVoice(lobby, result -> {
 			if (result != Result.OK) {

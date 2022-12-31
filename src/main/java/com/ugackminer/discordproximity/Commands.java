@@ -26,7 +26,7 @@ public class Commands {
     {
         dispatcher.register(
             literal("discordprox").executes(context -> {
-                context.getSource().sendFeedback(Text.literal("Discord Proximity Chat\nVersion " + DiscordProximity.VERSION));
+                context.getSource().sendFeedback(Text.translatable("commands.info", DiscordProximity.VERSION));
                 return Command.SINGLE_SUCCESS;
             }).then(literal("config").executes(context -> {
                 DiscordProximity.core.overlayManager().openVoiceSettings();
@@ -34,7 +34,7 @@ public class Commands {
             })).then(literal("lobby")
                 .then(literal("list").executes(context -> {
                     DiscordProximity.searchLobbies(context.getSource().getClient(), lobbies -> {
-                        context.getSource().sendFeedback(Text.literal("Listed public lobbies for " + context.getSource().getClient().getCurrentServerEntry().address + ":")); 
+                        context.getSource().sendFeedback(Text.translatable("commands.lobby.list", context.getSource().getClient().getCurrentServerEntry().address)); 
                         for (Lobby lobby : lobbies) 
                         {
                             DiscordProximity.core.userManager().getUser(lobby.getOwnerId(), (result, user) -> {
@@ -42,7 +42,7 @@ public class Commands {
                                     DiscordProximity.LOGGER.error("Error getting username from ID (Discord response not OK)");
                                     return;
                                 }
-                                Text text = clickCommandText(Text.literal(user.getUsername() + '#' + user.getDiscriminator()), "/discordprox lobby join " + lobby.getId());
+                                Text text = clickCommandText(Text.translatable("commands.lobby.list.user", user.getUsername(), user.getDiscriminator()), "/discordprox lobby join " + lobby.getId());
                                 context.getSource().sendFeedback(text); 
                             });
                         }
@@ -58,10 +58,11 @@ public class Commands {
                         transaction.setMetadata("serverip", context.getSource().getClient().getCurrentServerEntry().address);
                         DiscordProximity.core.lobbyManager().createLobby(transaction, (result, lobby) -> {
                             DiscordProximity.lobbyJoined(result, lobby);
-                            Text text = Text.literal("Private lobby created (")
-                                .append(clickCopyText(Text.literal("" + lobby.getId()), "" + lobby.getId()))
-                                .append(") ")
-                                .append(clickCopyText(Text.literal("SECRET"), lobby.getSecret()));
+
+                            Text text = Text.translatable("commands.lobby.create.private")
+                                .append(clickCopyText(Text.translatable("commands.lobby.create.private.id", lobby.getId()), "" + lobby.getId()))
+                                .append(" ")
+                                .append(clickCopyText(Text.translatable("commands.lobby.create.private.secret"), lobby.getSecret()));
                             context.getSource().sendFeedback(text);
                         });
                         return Command.SINGLE_SUCCESS;  
@@ -74,7 +75,7 @@ public class Commands {
                         transaction.setMetadata("serverip", context.getSource().getClient().getCurrentServerEntry().address);
                         DiscordProximity.core.lobbyManager().createLobby(transaction, (result, lobby) -> {
                             DiscordProximity.lobbyJoined(result, lobby);
-                            context.getSource().sendFeedback(Text.literal("Public lobby created (" + lobby.getId() + ")"));
+                            context.getSource().sendFeedback(Text.translatable("commands.lobby.create.public", lobby.getId()));
                         });
                         return Command.SINGLE_SUCCESS;  
                     }))
@@ -90,7 +91,7 @@ public class Commands {
                             DiscordProximity.LOGGER.error("Could not get username (Discord result not OK)");
                             // return;
                         }
-                        context.getSource().sendFeedback(Text.literal(String.format("Connected to %s#%s (%d)", user.getUsername(), user.getDiscriminator(), lobbyId)));
+                        context.getSource().sendFeedback(Text.translatable("commands.lobby.join.public", user.getUsername(), user.getDiscriminator(), lobbyId));
                     });
                     return Command.SINGLE_SUCCESS;
                 }).then(argument("secret", StringArgumentType.word()).executes(context -> {
@@ -109,7 +110,7 @@ public class Commands {
                                 DiscordProximity.LOGGER.error("Could not get username (Discord result not OK)");
                                 return;
                             }
-                            context.getSource().sendFeedback(Text.literal(String.format("Connected to %s#%s privately (%d)", user.getUsername(), user.getDiscriminator(), lobbyId)));
+                            context.getSource().sendFeedback(Text.translatable("commands.lobby.join.private", user.getUsername(), user.getDiscriminator(), lobbyId));
                         });
                     });
                     return Command.SINGLE_SUCCESS;  
@@ -117,10 +118,10 @@ public class Commands {
                 .then(literal("leave").executes(context -> {
                     try {
                         DiscordProximity.leaveLobby();
-                        context.getSource().sendFeedback(Text.literal("Disconnected from lobby!"));
+                        context.getSource().sendFeedback(Text.translatable("commands.lobby.leave"));
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        context.getSource().sendError(Text.literal("There was an error disconnecting from the lobby."));
+                        context.getSource().sendError(Text.translatable("commands.lobby.leave.error"));
                     }
                     return Command.SINGLE_SUCCESS;
                 }))
@@ -139,7 +140,7 @@ public class Commands {
     {
         return text.styled(style -> style.withFormatting(Formatting.UNDERLINE)
             .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, copyThis))
-            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Copy to clipboard"))));
+            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("commands.click.copy"))));
     }
 
 }
