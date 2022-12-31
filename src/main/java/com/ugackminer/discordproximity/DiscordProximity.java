@@ -69,11 +69,12 @@ public class DiscordProximity implements ModInitializer {
 		core = new Core(params);
 
 		ClientTickEvents.START_CLIENT_TICK.register(client -> {
-			core.runCallbacks();
+			if (!client.isIntegratedServerRunning())
+				core.runCallbacks();
 		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (client.world != null) {
+			if (client.world != null && !client.isIntegratedServerRunning()) {
 				List<AbstractClientPlayerEntity> worldPlayers = client.world.getPlayers();
 				
 				Set<UUID> localSet = new HashSet<UUID>(uuidMap.keySet());
@@ -100,7 +101,8 @@ public class DiscordProximity implements ModInitializer {
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			Commands.initalize(dispatcher);
+			if (!MinecraftClient.getInstance().isIntegratedServerRunning())
+				Commands.initalize(dispatcher);
 		});
 
 		ClientPlayConnectionEvents.JOIN.register(this::setupLobbies);
@@ -109,6 +111,8 @@ public class DiscordProximity implements ModInitializer {
 
 	private void setupLobbies(ClientPlayPacketListener handler, PacketSender sender, MinecraftClient client) 
 	{
+		if (client.isIntegratedServerRunning())
+			return;
 		searchLobbies(client, lobbies -> {
 			if (lobbies.size() > 0) {
 				ListIterator<Lobby> lobbiesLoop = lobbies.listIterator();
@@ -129,6 +133,8 @@ public class DiscordProximity implements ModInitializer {
 
 	public static void searchLobbies(MinecraftClient client, Consumer<List<Lobby>> callback) 
 	{
+		if (client.isIntegratedServerRunning())
+			return;
 		String serverIP = client.getCurrentServerEntry().address;
 		LOGGER.info("Checking for lobbies on " + serverIP);
 
@@ -190,9 +196,8 @@ public class DiscordProximity implements ModInitializer {
 	}
 
 	public static void leaveLobby(Object... unused) {
-		if (core.lobbyManager().getLobbies().isEmpty()) {
+		if (core.lobbyManager().getLobbies().isEmpty() || MinecraftClient.getInstance().isIntegratedServerRunning())
 			return;
-		}
 		LOGGER.info("Disconnecting from voice...");
 		core.lobbyManager().disconnectVoice(lobby, result -> {
 			if (result != Result.OK) {
