@@ -11,7 +11,7 @@ A working proximity chat mod which allows for chat through discord! No server-si
 ## NOTICE:
 According to [discord-game-sdk4j](https://github.com/JnCrMx/discord-game-sdk4j) (one of the libraries for this project), the components that make this mod possible will be deprecated on Tuesday May 2nd, 2023.
 
-This mod will likely stop working past that date, with no garuntee of ever working again.
+This mod will likely stop working past that date, with no guarantee of ever working again.
 
 ## Setup
 
@@ -19,4 +19,4 @@ For setup instructions please see the [fabric wiki page](https://fabricmc.net/wi
 
 ## License
 
-This template is available under the GPL-3.0 license. Check [here](https://choosealicense.com/licenses/gpl-3.0/) to learn what that means for you.
+This mod is available under the GPL-3.0 license. Check [here](https://choosealicense.com/licenses/gpl-3.0/) to learn what that means for you.
