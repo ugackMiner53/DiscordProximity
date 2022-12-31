@@ -1,0 +1,32 @@
+package com.ugackminer.discordproximity.mixin;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import com.mojang.authlib.GameProfile;
+import com.ugackminer.discordproximity.DiscordProximity;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.message.MessageHandler;
+import net.minecraft.network.message.MessageType;
+import net.minecraft.network.message.SignedMessage;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+
+@Mixin(MessageHandler.class)
+public class MessageHandlerMixin {
+    
+    @Inject(method="onChatMessage()V", at = @At("HEAD"), cancellable = true)
+    void onChatMessage(SignedMessage message, GameProfile sender, MessageType.Parameters params, CallbackInfo info) {
+        if (message.getContent().getString().contains(Text.literal("!discordprox").getString())) {
+            DiscordProximity.LOGGER.info("Message from " + sender.getName() + " contains !discordprox");
+            MinecraftClient.getInstance().player.sendMessage(Text.literal("User " + sender.getName() + " wants to be added [Accept] [Decline]"));
+            info.cancel();
+        }
+    }
+
+
+}
