@@ -6,8 +6,6 @@
   "mixins": [
   ],
   "client": [
-    "ExampleMixin",
-    "EntitySelectorAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

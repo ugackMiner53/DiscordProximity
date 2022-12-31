@@ -2,14 +2,16 @@ package com.ugackminer.discordproximity;
 
 import java.net.MalformedURLException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ import de.jcm.discordgamesdk.lobby.LobbyMemberTransaction;
 import de.jcm.discordgamesdk.lobby.LobbySearchQuery;
 import de.jcm.discordgamesdk.lobby.LobbyTransaction;
 import de.jcm.discordgamesdk.lobby.LobbyType;
+import de.jcm.discordgamesdk.user.DiscordUser;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -35,24 +38,17 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 public class DiscordProximity implements ModInitializer {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger("discordproximity");
-	public static final String VERSION = "0.0.0 BETA DEBUG RELEASE (please don't share)";
+	public static final String VERSION = "1.0.0b";
 	public static Core core;
 	public static Lobby lobby;
 
-	long currentUserID;
-
-	public static Map<UUID, Long> uuidMap = new LinkedHashMap<UUID, Long>();
+	public static long currentUserID;
+	public static Map<UUID, Long> uuidMap = new HashMap<UUID, Long>();
 
 
 /***
  * TODO:
- * - Add players to the uuidMap
- * - Remove players from the uuidMap when they leave
- * - Add proximity to the proximity chat mod
- * - Maybe make some easier way to test this dumb stuff?
- * - Multi-lobby support
- * - (Private lobbies)
- * 
+ * - Config??
  */
 
 
@@ -79,21 +75,26 @@ public class DiscordProximity implements ModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.world != null) {
 				List<AbstractClientPlayerEntity> worldPlayers = client.world.getPlayers();
-				boolean[] playerFound = new boolean[uuidMap.size()]; 	// This is a better way of keeping track of who's in render distance.
-																		// If there's a player in our uuidMap whose index here is false, then they aren't in render distance...
+				
+				Set<UUID> localSet = new HashSet<UUID>(uuidMap.keySet());
+
 				for (int i=0; i<worldPlayers.size(); i++) {
 					AbstractClientPlayerEntity player = worldPlayers.get(i);
-					if (uuidMap.containsKey(player.getUuid())) {
-						playerFound[i] = true;
-						// Update other users volumes
-						VolumeManager.updateVolume(uuidMap.get(player.getUuid()), client.player.distanceTo(player));
+					// Update other users volumes
+					if (uuidMap.get(player.getUuid()) != null) {
+						// Add a cool spyglass effect :)
+						if (client.player.isUsingSpyglass() && client.player.canSee(player)) {
+							VolumeManager.updateVolume(uuidMap.get(player.getUuid()), 0.1f);
+							localSet.remove(player.getUuid());
+						} else {
+							VolumeManager.updateVolume(uuidMap.get(player.getUuid()), client.player.distanceTo(player));
+							localSet.remove(player.getUuid());
+						}
 					}
 				}
 
-				for (int i=0; i<playerFound.length; i++) {
-					if (!playerFound[i]) {
-						core.voiceManager().setLocalVolume(/* We need to get the discord ID using the index here, which doesn't work on hashmaps... */, 0);
-					}
+				for (UUID notFound : localSet) {
+					VolumeManager.updateVolume(uuidMap.get(notFound), 0);
 				}
 			}
 		});
@@ -103,14 +104,34 @@ public class DiscordProximity implements ModInitializer {
 		});
 
 		ClientPlayConnectionEvents.JOIN.register(this::setupLobbies);
-		ClientPlayConnectionEvents.DISCONNECT.register(this::leaveLobby);
-
+		ClientPlayConnectionEvents.DISCONNECT.register(DiscordProximity::leaveLobby);
 	}
 
 	private void setupLobbies(ClientPlayPacketListener handler, PacketSender sender, MinecraftClient client) 
 	{
+		searchLobbies(client, lobbies -> {
+			if (lobbies.size() > 0) {
+				ListIterator<Lobby> lobbiesLoop = lobbies.listIterator();
+				while (lobbiesLoop.hasNext()) {
+					LOGGER.info(lobbiesLoop.nextIndex() + ": " + lobbiesLoop.next().getOwnerId());
+				}
+				LOGGER.info("Connecting to the first lobby (" + lobbies.get(0).getId() + ")");
+				core.lobbyManager().connectLobby(lobbies.get(0), DiscordProximity::lobbyJoined);
+			} else {
+				LOGGER.info("No lobby found, so we're creating one...");
+				LobbyTransaction transaction = core.lobbyManager().getLobbyCreateTransaction();
+				transaction.setType(LobbyType.PUBLIC);
+				transaction.setMetadata("serverip", client.getCurrentServerEntry().address);
+				core.lobbyManager().createLobby(transaction, DiscordProximity::lobbyJoined);
+			}
+		});
+	}
+
+	public static void searchLobbies(MinecraftClient client, Consumer<List<Lobby>> callback) 
+	{
 		String serverIP = client.getCurrentServerEntry().address;
 		LOGGER.info("Checking for lobbies on " + serverIP);
+
 		LobbySearchQuery query = core.lobbyManager().getSearchQuery();
 		query.filter("metadata.serverip", LobbySearchQuery.Comparison.EQUAL, LobbySearchQuery.Cast.STRING, serverIP);
 		core.lobbyManager().search(query, result -> {
@@ -120,24 +141,11 @@ public class DiscordProximity implements ModInitializer {
 				return;
 			}
 			List<Lobby> lobbies = core.lobbyManager().getLobbies();
-			if (lobbies.size() > 0) {
-				ListIterator<Lobby> lobbiesLoop = lobbies.listIterator();
-				while (lobbiesLoop.hasNext()) {
-					LOGGER.info(lobbiesLoop.nextIndex() + ": " + lobbiesLoop.next().getOwnerId());
-				}
-				LOGGER.info("Connecting to the first lobby (Currently there's no system for duplicate lobbies...)");
-				core.lobbyManager().connectLobby(lobbies.get(0), this::lobbyJoined);
-			} else {
-				LOGGER.info("No lobby found, so we're creating one...");
-				LobbyTransaction transaction = core.lobbyManager().getLobbyCreateTransaction();
-				transaction.setType(LobbyType.PUBLIC);
-				transaction.setMetadata("serverip", serverIP);
-				core.lobbyManager().createLobby(transaction, this::lobbyJoined);
-			}
+			callback.accept(lobbies);
 		});
 	}
 
-	private void lobbyJoined(Result _result, Lobby _lobby) 
+	public static void lobbyJoined(Result _result, Lobby _lobby) 
 	{
 		if (_result != Result.OK) {
 			System.out.println("Something went wrong! (Discord response isn't OK)");
@@ -159,12 +167,6 @@ public class DiscordProximity implements ModInitializer {
 			}
 		});
 
-
-		// LOGGER.info("Connecting to networking...");
-		// core.lobbyManager().connectNetwork(lobby);
-        // core.lobbyManager().openNetworkChannel(DiscordProximity.lobby, (byte)0, true);
-
-
 		LOGGER.info("Connecting to voice...");
 		core.lobbyManager().connectVoice(lobby, result -> {
 			if (result != Result.OK) {
@@ -184,21 +186,10 @@ public class DiscordProximity implements ModInitializer {
 				uuidMap.put(uuid, userID); // Add it to the map!
 			}
 		}
-
-		// LOGGER.info("Asking network users for minecraft uuids...");	
-		// core.lobbyManager().sendLobbyMessage(lobby, "lobbytest".getBytes()); // this is a test event
-		// for (int i=0; i<core.lobbyManager().memberCount(lobby); i++) {
-		// 	long userID = core.lobbyManager().getMemberUserId(lobby, i);
-		// 	LOGGER.info("Asking user " + i + " (" + userID + ")");
-		// 	core.lobbyManager().sendNetworkMessage(lobby, userID, (byte)0, "requestuuid".getBytes());
-		// }
 		
 	}
 
-	private void leaveLobby(ClientPlayPacketListener handler, MinecraftClient client) {
-		// LOGGER.info("Disconnecting from network...");
-		// core.lobbyManager().disconnectNetwork(lobby);
-
+	public static void leaveLobby(Object... unused) {
 		LOGGER.info("Disconnecting from voice...");
 		core.lobbyManager().disconnectVoice(lobby, result -> {
 			if (result != Result.OK) {
@@ -213,12 +204,24 @@ public class DiscordProximity implements ModInitializer {
 				// Transfer the ownership of the lobby if there are other people in it
 				LOGGER.info("Transferring the lobby ownership...");
 				LobbyTransaction transaction = core.lobbyManager().getLobbyUpdateTransaction(lobby);
+				// *Possible issue here where the lobby IDs might be out of order, and the owner might try to transfer themselves the lobby?
+				// This won't happen if the memberUsers are always ordered though, so it shouldn't be an issue.
 				transaction.setOwner(core.lobbyManager().getMemberUsers(lobby).get(1).getUserId());
 				core.lobbyManager().updateLobby(lobby, transaction, res -> {
 					if (res != Result.OK) {
 						LOGGER.error("Error transferring lobby to " + core.lobbyManager().getMemberUsers(lobby).get(1).getUserId() + "(Discord Response not OK)");
 					}
+					LOGGER.info("Disconnecting from the lobby...");
+					core.lobbyManager().disconnectLobby(lobby, result -> {
+						if (result != Result.OK) {
+							LOGGER.error("Error disconnecting from lobby (Discord Response not OK)");
+						} else {
+							LOGGER.info("Disconnected from lobby!");
+						}
+					});
 				});
+
+
 			} else {
 				// If there are no other people, just delete the lobby
 				LOGGER.info("Deleting the lobby...");
