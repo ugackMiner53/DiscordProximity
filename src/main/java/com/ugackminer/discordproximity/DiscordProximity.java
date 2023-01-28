@@ -24,7 +24,6 @@ import de.jcm.discordgamesdk.lobby.LobbyMemberTransaction;
 import de.jcm.discordgamesdk.lobby.LobbySearchQuery;
 import de.jcm.discordgamesdk.lobby.LobbyTransaction;
 import de.jcm.discordgamesdk.lobby.LobbyType;
-import de.jcm.discordgamesdk.user.DiscordUser;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -33,12 +32,14 @@ import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.network.listener.ClientPlayPacketListener;
+import net.minecraft.util.math.Vec3d;
 
 public class DiscordProximity implements ModInitializer {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger("discordproximity");
-	public static final String VERSION = "1.0.0b";
+	public static final String VERSION = "1.0.1";
 	public static Core core;
 	public static Lobby lobby;
 
@@ -49,6 +50,8 @@ public class DiscordProximity implements ModInitializer {
 /***
  * TODO:
  * - Config??
+ * - Fix the spyglass
+ * - Test other MC Versions
  */
 
 
@@ -84,7 +87,7 @@ public class DiscordProximity implements ModInitializer {
 					// Update other users volumes
 					if (uuidMap.get(player.getUuid()) != null) {
 						// Add a cool spyglass effect :)
-						if (client.player.isUsingSpyglass() && client.player.canSee(player)) {
+						if (client.player.isUsingSpyglass() && canSeePlayer(client.player, player)) {
 							VolumeManager.updateVolume(uuidMap.get(player.getUuid()), 0.1f);
 							localSet.remove(player.getUuid());
 						} else {
@@ -108,6 +111,16 @@ public class DiscordProximity implements ModInitializer {
 		ClientPlayConnectionEvents.JOIN.register(this::setupLobbies);
 		ClientPlayConnectionEvents.DISCONNECT.register(DiscordProximity::leaveLobby);
 	}
+
+	// Checks if the line of sight isn't blocked and that the player is less than .1 degress off
+	private boolean canSeePlayer(ClientPlayerEntity client, AbstractClientPlayerEntity player) {
+        Vec3d playerRotation = client.getRotationVec(1.0f).normalize();
+        Vec3d distanceVector = new Vec3d(player.getX() - client.getX(), player.getEyeY() - client.getEyeY(), player.getZ() - client.getZ());
+        if (playerRotation.dotProduct(distanceVector.normalize()) > 0.99) {
+            return client.canSee(player);
+        }
+        return false;
+    }
 
 	private void setupLobbies(ClientPlayPacketListener handler, PacketSender sender, MinecraftClient client) 
 	{

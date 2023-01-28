@@ -9,8 +9,8 @@
     "ugackMiner"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/ugackMiner53/DiscordProximity",
+    "sources": "https://github.com/ugackMiner53/DiscordProximity"
   },
 
   "license": "GPL-3.0",
@@ -25,11 +25,8 @@
 
   "depends": {
     "fabricloader": ">=0.14.11",
-    "fabric-api": "*",
-    "minecraft": "~1.19.3",
+    "fabric": "*",
+    "minecraft": ">=1.19",
     "java": ">=17"
-  },
-  "suggests": {
-    "another-mod": "*"
   }
 }
